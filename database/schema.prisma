@@ -1,0 +1,6 @@
+// Phase 2 database placeholder.
+//
+// The SQL Server datasource, Prisma generator, and data models will be added
+// together after the team selects the Prisma version and cloud-hosting setup.
+// Keeping this file in Phase 1 reserves the intended database location without
+// locking the prototype to a premature configuration.
