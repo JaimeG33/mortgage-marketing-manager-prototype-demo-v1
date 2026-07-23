@@ -1,14 +1,37 @@
 # Database folder
 
-This folder reserves the database layer for the next development phase.
+This folder contains the completed Phase 2 SQL Server and Prisma foundation.
 
-Planned responsibilities:
+## Contents
 
-- Define the SQL Server schema with Prisma.
-- Store the central content identifier shared by matching social posts.
-- Store social account and platform-post URLs/IDs.
-- Store current manually entered Instagram analytics.
-- Seed reproducible demonstration records for team members.
+- `schema.prisma` — the introspected seven-model SQL Server schema.
+- `migrations/0_init/migration.sql` — the baseline migration for the existing
+  database.
+- `seedDemoData.ts` — repeatable demonstration data created with Prisma upserts.
+- `sql/create_mortgage_marketing_prototype.sql` — the original SQL Server setup
+  script.
 
-Phase 1 does not connect to a database yet. Do not run Prisma commands until the
-required packages and `DATABASE_URL` setup are added in Phase 2.
+The shared Prisma client is located at:
+
+```text
+services/database/prismaClient.ts
+```
+
+The independent database test is located at:
+
+```text
+scripts/testDatabaseConnection.ts
+```
+
+## Common commands
+
+```powershell
+npx prisma generate
+npx prisma validate
+npx prisma migrate status
+npx prisma db seed
+npx tsx scripts/testDatabaseConnection.ts
+```
+
+The local `.env` contains the real SQL Server connection values and must never be
+committed. `.env.example` contains only placeholders that are safe to share.
