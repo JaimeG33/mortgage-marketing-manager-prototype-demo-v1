@@ -8,10 +8,21 @@ interface PlatformBreakdownProps {
 export function PlatformBreakdown({
   platformMetrics,
 }: PlatformBreakdownProps) {
+  if (platformMetrics.length === 0) {
+    return (
+      <p className="description">
+        No active supported platform posts are available for this content.
+      </p>
+    );
+  }
+
   return (
     <div className="platform-list">
       {platformMetrics.map((row) => (
-        <div className="platform-row" key={row.externalPostId}>
+        <div
+          className="platform-row"
+          key={`${row.platform}-${row.externalPostId}`}
+        >
           <span className={`platform-logo ${row.platformClassName}`}>
             {row.platform.slice(0, 1)}
           </span>
@@ -27,7 +38,11 @@ export function PlatformBreakdown({
               Open post
             </a>
           ) : (
-            <button type="button" disabled title="A real post URL will be stored in the database later.">
+            <button
+              type="button"
+              disabled
+              title="No post URL is stored for this platform record."
+            >
               Link pending
             </button>
           )}

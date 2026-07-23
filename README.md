@@ -1,6 +1,6 @@
 # Mortgage Marketing Manager Prototype Demo v1
 
-A Phase 2 proof-of-concept application for organizing and displaying mortgage
+A Phase 3 proof-of-concept application for organizing and displaying mortgage
 marketing analytics across multiple social platforms.
 
 The core concept is that one central content item can represent matching posts
@@ -33,8 +33,16 @@ normalizes those platform results into three funnel metrics:
   accounts, two matching platform posts, and their metrics.
 - Independent TypeScript database-connection test.
 
-The dashboard still uses the Phase 1 deterministic providers. Replacing those
-values with server-side SQL queries is Phase 3.
+### Phase 3 — Complete
+
+- The Home dashboard queries SQL Server from a Next.js Server Component.
+- Central content, campaign, platform, post-link, and metric values are mapped
+  from relational records into the existing dashboard component types.
+- Prisma `BigInt` metric values are converted safely before reaching React.
+- Engagements include likes, comments, shares, saves, and reactions.
+- Missing metrics, unsupported platforms, missing content, and database
+  connection failures have controlled behavior.
+- An independent dashboard-service test verifies the seeded totals.
 
 Not included yet:
 
@@ -80,14 +88,15 @@ Copy-Item .env.example .env
 Update `.env` with the real local SQL Server host, port, database, username, and
 password. Never commit `.env`.
 
-Generate the Prisma client and verify the database foundation:
+Generate, seed, and verify the database-powered dashboard:
 
 ```powershell
-npx prisma generate
+npm run db:generate
 npx prisma validate
 npx prisma migrate status
-npx prisma db seed
-npx tsx scripts/testDatabaseConnection.ts
+npm run db:seed
+npm run db:test
+npm run db:test-dashboard
 ```
 
 Start the development server:
@@ -119,7 +128,7 @@ app/
   settings/             Coming-soon page
   globals.css           Shared application styling
   layout.tsx            Shared application shell and sidebar
-  page.tsx              Home analytics dashboard
+  page.tsx              SQL Server-powered Home dashboard
 
 components/
   dashboard/
@@ -136,6 +145,8 @@ services/
     manualInstagramProvider.ts
     types.ts
     youtubeProvider.ts
+  dashboard/
+    getDashboardData.ts
   database/
     prismaClient.ts
 
@@ -151,6 +162,7 @@ database/
 
 scripts/
   testDatabaseConnection.ts
+  testDashboardData.ts
 
 prisma.config.ts
 .env.example
@@ -159,23 +171,25 @@ prisma.config.ts
 The generated Prisma client is written to `generated/prisma/` locally and is
 ignored by Git.
 
-## Analytics-provider design
+## Dashboard data flow
 
-The Phase 1 providers return a shared `PlatformPostMetrics` structure:
+`app/page.tsx` is a dynamically rendered Server Component. It calls
+`services/dashboard/getDashboardData.ts`, which:
 
-- `youtubeProvider.ts` currently returns deterministic YouTube demonstration
-  data. It is the future boundary for the YouTube Data API.
-- `manualInstagramProvider.ts` represents the manual metrics workflow planned
-  before Meta API access is implemented.
-- `combineMetrics.ts` combines normalized platform results for the dashboard.
+1. Loads the configured active `ContentItem`.
+2. Includes its campaign, active platform posts, social accounts, platforms, and
+   current post metrics.
+3. Converts SQL/Prisma values into the shared `PlatformPostMetrics` shape.
+4. Combines the platform rows into Reach, Engagements, and Leads.
+5. Returns serializable values to the existing presentational components.
 
-Keeping the providers separate means the dashboard does not need to know
-whether metrics came from an external API, manual database entry, simulated
-data, or—as Phase 3 will add—SQL Server.
+The legacy Phase 1 providers remain in the repository as clean boundaries for
+future YouTube API and manual-entry work, but the Home dashboard no longer calls
+them.
 
 ## Database foundation
 
-The Phase 2 schema stores:
+The schema stores:
 
 - Marketing campaigns.
 - Stable central content identities.
@@ -194,6 +208,6 @@ files and must not be committed to GitHub.
 
 ## Next phase
 
-Phase 3 will query SQL Server from the server-side dashboard, convert database
-records into the existing analytics component types, and replace the current
-hardcoded content and metric values without changing the visual layout.
+Phase 4 will replace the simulated YouTube metric refresh path with server-side
+YouTube Data API requests while retaining SQL Server as the normalized storage
+and dashboard source.

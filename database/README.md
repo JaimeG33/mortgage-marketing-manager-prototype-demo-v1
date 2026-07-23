@@ -1,6 +1,7 @@
 # Database folder
 
-This folder contains the completed Phase 2 SQL Server and Prisma foundation.
+This folder contains the completed SQL Server and Prisma foundation used by the
+Phase 3 database-powered dashboard.
 
 ## Contents
 
@@ -17,20 +18,28 @@ The shared Prisma client is located at:
 services/database/prismaClient.ts
 ```
 
-The independent database test is located at:
+The dashboard query and mapping service is located at:
+
+```text
+services/dashboard/getDashboardData.ts
+```
+
+Independent tests are located at:
 
 ```text
 scripts/testDatabaseConnection.ts
+scripts/testDashboardData.ts
 ```
 
 ## Common commands
 
 ```powershell
-npx prisma generate
+npm run db:generate
 npx prisma validate
 npx prisma migrate status
-npx prisma db seed
-npx tsx scripts/testDatabaseConnection.ts
+npm run db:seed
+npm run db:test
+npm run db:test-dashboard
 ```
 
 The local `.env` contains the real SQL Server connection values and must never be

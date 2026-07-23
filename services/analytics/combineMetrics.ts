@@ -1,7 +1,13 @@
 import type { CombinedMetrics, PlatformPostMetrics } from "./types";
 
 export function getEngagements(metrics: PlatformPostMetrics): number {
-  return metrics.likes + metrics.comments + metrics.shares;
+  return (
+    metrics.likes +
+    metrics.comments +
+    metrics.shares +
+    metrics.saves +
+    metrics.reactions
+  );
 }
 
 export function combineMetrics(
