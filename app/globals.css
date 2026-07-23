@@ -801,3 +801,217 @@ input:disabled {
     margin-left: 0;
   }
 }
+
+.metric-analytics {
+  margin: 18px 0;
+}
+
+.metric-analytics .metric-grid {
+  margin: 0;
+}
+
+.metric-card-button {
+  width: 100%;
+  min-width: 0;
+  position: relative;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.metric-card-button:hover {
+  transform: translateY(-2px);
+  border-color: #b9ccec;
+  box-shadow: 0 17px 38px rgba(34, 60, 111, 0.13);
+}
+
+.metric-card-button:focus-visible {
+  outline: 3px solid rgba(20, 108, 244, 0.25);
+  outline-offset: 3px;
+}
+
+.metric-card-button.active {
+  border-color: var(--blue);
+  box-shadow: 0 14px 34px rgba(20, 108, 244, 0.15);
+}
+
+.metric-card-copy,
+.metric-card-title {
+  display: block;
+}
+
+.metric-card-copy {
+  min-width: 0;
+}
+
+.metric-card-title {
+  margin-bottom: 2px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.metric-card-button .positive {
+  display: block;
+}
+
+.metric-expand-icon {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.metric-detail-panel {
+  margin-top: 14px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.metric-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.metric-detail-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.metric-detail-heading > p {
+  width: min(100%, 470px);
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.comparison-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.comparison-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.35fr) minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.comparison-label strong,
+.comparison-label small {
+  display: block;
+}
+
+.comparison-label strong {
+  font-size: 13px;
+}
+
+.comparison-label small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.comparison-track {
+  height: 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9edf4;
+}
+
+.comparison-track > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+.comparison-value {
+  min-width: 62px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.engagement-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.engagement-platform-card {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #f8faff;
+}
+
+.engagement-platform-heading {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.engagement-platform-heading h3,
+.engagement-platform-heading small {
+  display: block;
+}
+
+.engagement-platform-heading h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.engagement-platform-heading small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.comparison-bars.compact {
+  gap: 10px;
+}
+
+.comparison-bars.compact .comparison-row {
+  grid-template-columns: 74px minmax(70px, 1fr) auto;
+  gap: 10px;
+}
+
+.comparison-bars.compact .comparison-label small {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .metric-detail-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .metric-detail-heading > p {
+    width: 100%;
+    text-align: left;
+  }
+
+  .engagement-platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-row,
+  .comparison-bars.compact .comparison-row {
+    grid-template-columns: 82px minmax(70px, 1fr) auto;
+    gap: 9px;
+  }
+}

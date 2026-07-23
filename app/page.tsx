@@ -1,5 +1,5 @@
 import { MarketingFunnel } from "@/components/dashboard/MarketingFunnel";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { MetricAnalyticsCards } from "@/components/dashboard/MetricAnalyticsCards";
 import { TopContentCard } from "@/components/dashboard/TopContentCard";
 import type { DashboardData } from "@/services/analytics/types";
 import { getDashboardData } from "@/services/dashboard/getDashboardData";
@@ -8,11 +8,18 @@ export const dynamic = "force-dynamic";
 
 const PROTOTYPE_LEAD_GOAL: number = 25;
 
-export default async function HomePage() {
+interface HomePageProps {
+  searchParams: Promise<{
+    content?: string | string[];
+  }>;
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
   let dashboardData: DashboardData | null;
+  const requestedContent = normalizeContentKey((await searchParams).content);
 
   try {
-    dashboardData = await getDashboardData();
+    dashboardData = await getDashboardData(requestedContent);
   } catch (error: unknown) {
     console.error("Unable to load the database-powered dashboard:", error);
 
@@ -23,7 +30,7 @@ export default async function HomePage() {
 
   if (!dashboardData) {
     return (
-      <DashboardUnavailable message="The configured central content item is missing or inactive. Run the Phase 2 seed command and refresh this page." />
+      <DashboardUnavailable message="The requested central content item is missing or inactive. Run the Phase 4 seed or SSMS setup script and refresh this page." />
     );
   }
 
@@ -61,29 +68,10 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="metric-grid">
-          <MetricCard
-            icon="◉"
-            title="Reach"
-            value={formatCompactNumber(combinedMetrics.reach)}
-            change={`Across ${platformMetrics.length} linked posts`}
-            tone="blue"
-          />
-          <MetricCard
-            icon="♡"
-            title="Engagements"
-            value={formatWholeNumber(combinedMetrics.engagements)}
-            change="Includes saves and reactions"
-            tone="purple"
-          />
-          <MetricCard
-            icon="♟"
-            title="Leads"
-            value={formatWholeNumber(combinedMetrics.leads)}
-            change="Stored link-click total"
-            tone="green"
-          />
-        </section>
+        <MetricAnalyticsCards
+          combinedMetrics={combinedMetrics}
+          platformMetrics={platformMetrics}
+        />
 
         <MarketingFunnel metrics={combinedMetrics} />
 
@@ -157,7 +145,7 @@ function MarketingAssistantPreview() {
           How can I get more leads?
         </button>
         <div className="chat-placeholder">
-          The AI Agent remains intentionally nonfunctional in Phase 3.
+          The AI Agent remains intentionally nonfunctional in Phase 4.
         </div>
       </div>
       <div className="assistant-input">
@@ -168,6 +156,15 @@ function MarketingAssistantPreview() {
       </div>
     </aside>
   );
+}
+
+function normalizeContentKey(
+  content: string | string[] | undefined,
+): string | undefined {
+  const value = Array.isArray(content) ? content[0] : content;
+  const trimmedValue = value?.trim();
+
+  return trimmedValue ? trimmedValue : undefined;
 }
 
 function formatWholeNumber(value: number): string {

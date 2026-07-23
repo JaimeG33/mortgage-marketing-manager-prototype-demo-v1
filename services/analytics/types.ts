@@ -2,11 +2,16 @@ export type PlatformName = "YouTube" | "Instagram";
 
 export type PlatformClassName = "youtube" | "instagram";
 
-export type AnalyticsSource = "simulated" | "manual" | "unavailable";
+export type AnalyticsSource =
+  | "youtube-api"
+  | "simulated"
+  | "manual"
+  | "unavailable";
 
 export interface PlatformPostMetrics {
   platform: PlatformName;
   platformClassName: PlatformClassName;
+  platformTitle?: string | null;
   postUrl: string | null;
   externalPostId: string;
   reach: number;

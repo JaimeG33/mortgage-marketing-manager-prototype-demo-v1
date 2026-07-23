@@ -1,6 +1,6 @@
 # Mortgage Marketing Manager Prototype Demo v1
 
-A Phase 3 proof-of-concept application for organizing and displaying mortgage
+A Phase 4 proof-of-concept application for organizing and displaying mortgage
 marketing analytics across multiple social platforms.
 
 The core concept is that one central content item can represent matching posts
@@ -9,45 +9,39 @@ normalizes those platform results into three funnel metrics:
 
 - **Reach** — how many times the content was viewed or shown.
 - **Engagements** — likes, comments, shares, saves, and reactions when available.
-- **Leads** — tracked, manually entered, or simulated landing-page link clicks.
+- **Leads** — tracked or manually entered landing-page link clicks.
 
 ## Current status
 
-### Phase 1 — Complete
+### Phases 1–3 — Complete
 
-- Simplified dashboard designed for a nontechnical user.
-- Reach, Engagements, and Leads metric cards.
-- Three-stage marketing funnel.
-- One central content item with YouTube and Instagram platform breakdowns.
-- Placeholder Campaigns, AI Agent, and Settings pages.
-- Organized analytics-provider and dashboard component layers.
+- Dashboard and shared analytics types.
+- SQL Server and Prisma relational foundation.
+- Dynamically rendered SQL-backed dashboard.
+- Safe conversion of Prisma `BigInt` values before React rendering.
+- Controlled behavior for missing data and database failures.
 
-### Phase 2 — Complete
+### Phase 4 — Implemented
 
-- SQL Server database connected through Prisma.
-- Seven-table relational schema for campaigns, central content, platforms,
-  accounts, posts, and current metrics.
-- Baseline migration for the existing SQL Server schema.
-- Reusable server-side Prisma client.
-- Deterministic seed data for one campaign, one central content item, two social
-  accounts, two matching platform posts, and their metrics.
-- Independent TypeScript database-connection test.
+- Server-only YouTube Data API v3 client using the built-in `fetch` API.
+- Batch lookup of public video statistics by exact external video ID.
+- Public channel statistics lookup using the channel ID returned by each video.
+- SQL refresh service that updates `CurrentPostMetrics`, `CurrentAccountMetrics`,
+  `PlatformPost`, and the central content title.
+- YouTube refreshes preserve application-owned `LeadClickCount` values.
+- Shares, saves, and reactions remain SQL `NULL` because the public Data API does
+  not provide those values.
+- Failed API requests do not overwrite the previously stored SQL snapshot.
+- Repeatable seed/setup for two Ramsey Show Highlights videos:
+  - `HLEEwG3dNcg`
+  - `P_DcMR6e73U`
+- API-only and database/dashboard verification scripts.
+- Optional dashboard content selection through the `content` query parameter.
 
-### Phase 3 — Complete
+Still deferred:
 
-- The Home dashboard queries SQL Server from a Next.js Server Component.
-- Central content, campaign, platform, post-link, and metric values are mapped
-  from relational records into the existing dashboard component types.
-- Prisma `BigInt` metric values are converted safely before reaching React.
-- Engagements include likes, comments, shares, saves, and reactions.
-- Missing metrics, unsupported platforms, missing content, and database
-  connection failures have controlled behavior.
-- An independent dashboard-service test verifies the seeded totals.
-
-Not included yet:
-
-- Live YouTube API requests.
 - Meta/Instagram API access.
+- Google OAuth and owner-only YouTube Analytics reports.
 - Social account authentication.
 - Automatic social publishing.
 - Functional AI agent.
@@ -60,6 +54,7 @@ Not included yet:
 - TypeScript targeting ES2020
 - SQL Server
 - Prisma ORM 7 with the Microsoft SQL Server adapter
+- YouTube Data API v3
 - Tailwind CSS/PostCSS tooling
 - ESLint
 
@@ -72,6 +67,8 @@ Requirements:
 - Git
 - A reachable SQL Server instance
 - A local database and login matching the values placed in `.env`
+- A Google Cloud project with YouTube Data API v3 enabled
+- A restricted YouTube Data API key
 
 Install dependencies:
 
@@ -85,129 +82,156 @@ Create a private local environment file from the committed template:
 Copy-Item .env.example .env
 ```
 
-Update `.env` with the real local SQL Server host, port, database, username, and
-password. Never commit `.env`.
+Update `.env` with the real SQL Server connection values and:
 
-Generate, seed, and verify the database-powered dashboard:
+```dotenv
+YOUTUBE_API_KEY="your-real-local-api-key"
+```
+
+Never commit `.env`, API keys, database passwords, or connection strings.
+
+## Database setup
+
+The normal repeatable setup is:
 
 ```powershell
 npm run db:generate
 npx prisma validate
 npx prisma migrate status
 npm run db:seed
-npm run db:test
-npm run db:test-dashboard
 ```
 
-Start the development server:
+The Phase 4 seed migrates the former placeholder YouTube account/post to The
+Ramsey Show Highlights and adds the secondary content item. It does not overwrite
+metrics whose source is already `YOUTUBE_API`.
+
+For manual SSMS setup, run:
+
+```text
+database/sql/configure_phase4_ramsey_youtube_content.sql
+```
+
+The script is transactional and safe to rerun.
+
+## YouTube API workflow
+
+Test the API without modifying SQL Server:
 
 ```powershell
+npm run youtube:test
+```
+
+Refresh all active configured YouTube posts and their channel snapshot:
+
+```powershell
+npm run youtube:refresh
+```
+
+The refresh reads video IDs from `PlatformPost.ExternalPostId`; it does not use
+environment variables as the production source of truth.
+
+Public video mapping:
+
+```text
+statistics.viewCount    -> CurrentPostMetrics.ReachCount
+statistics.likeCount    -> CurrentPostMetrics.LikeCount
+statistics.commentCount -> CurrentPostMetrics.CommentCount
+snippet.title           -> PlatformPost.PlatformTitle and ContentItem.Title
+snippet.publishedAt     -> PlatformPost.PublishedAt
+snippet.channelId       -> SocialAccount.ExternalAccountId
+```
+
+Public channel mapping:
+
+```text
+statistics.subscriberCount -> CurrentAccountMetrics.AudienceCount
+statistics.viewCount       -> CurrentAccountMetrics.TotalViewCount
+statistics.videoCount      -> CurrentAccountMetrics.ContentCount
+```
+
+Unavailable public metrics are stored as `NULL`, not fabricated as zero. The
+current dashboard treats those null fields as zero only while calculating the
+available engagement subtotal.
+
+## Verification
+
+```powershell
+npm run db:test
+npm run db:test-dashboard
+npm run lint
+npm run build
 npm run dev
 ```
 
-Open:
+Primary dashboard:
 
 ```text
 http://localhost:3000
 ```
 
-Run project checks:
+Secondary Ramsey video:
 
-```powershell
-npm run lint
-npm run build
+```text
+http://localhost:3000/?content=ramsey-show-highlights-p-dcmr6e73u
 ```
+
+After a refresh, verify that:
+
+- Each content item retains its correct YouTube video ID.
+- The YouTube rows show `YouTube API updated ...`.
+- Public views, likes, and comments match the API test output.
+- Instagram remains manual.
+- Lead clicks remain unchanged.
+- `CurrentAccountMetrics` contains the public Ramsey channel snapshot.
 
 ## Current project structure
 
 ```text
 app/
-  api/                  Reserved for future server-side API routes
-  ai-agent/             Coming-soon page
-  campaigns/            Coming-soon page
-  settings/             Coming-soon page
-  globals.css           Shared application styling
-  layout.tsx            Shared application shell and sidebar
-  page.tsx              SQL Server-powered Home dashboard
+  page.tsx
 
 components/
   dashboard/
-    MarketingFunnel.tsx
-    MetricCard.tsx
     PlatformBreakdown.tsx
-    TopContentCard.tsx
-  ComingSoon.tsx
-  Sidebar.tsx
 
 services/
   analytics/
     combineMetrics.ts
-    manualInstagramProvider.ts
     types.ts
-    youtubeProvider.ts
   dashboard/
     getDashboardData.ts
   database/
     prismaClient.ts
+  youtube/
+    refreshYouTubeMetrics.ts
+    types.ts
+    youtubeDataApi.ts
 
 database/
-  migrations/
-    0_init/
-      migration.sql
+  migrations/0_init/migration.sql
   sql/
+    configure_phase4_ramsey_youtube_content.sql
     create_mortgage_marketing_prototype.sql
   README.md
   schema.prisma
   seedDemoData.ts
 
 scripts/
+  refreshYouTubeMetrics.ts
   testDatabaseConnection.ts
   testDashboardData.ts
-
-prisma.config.ts
-.env.example
+  testYouTubeDataApi.ts
 ```
 
 The generated Prisma client is written to `generated/prisma/` locally and is
 ignored by Git.
 
-## Dashboard data flow
+## Security and scope
 
-`app/page.tsx` is a dynamically rendered Server Component. It calls
-`services/dashboard/getDashboardData.ts`, which:
+The API key is used only by server-side scripts/services. Phase 4 intentionally
+does not expose a public refresh route because the prototype does not yet have
+authentication, authorization, CSRF protection, or rate limiting.
 
-1. Loads the configured active `ContentItem`.
-2. Includes its campaign, active platform posts, social accounts, platforms, and
-   current post metrics.
-3. Converts SQL/Prisma values into the shared `PlatformPostMetrics` shape.
-4. Combines the platform rows into Reach, Engagements, and Leads.
-5. Returns serializable values to the existing presentational components.
-
-The legacy Phase 1 providers remain in the repository as clean boundaries for
-future YouTube API and manual-entry work, but the Home dashboard no longer calls
-them.
-
-## Database foundation
-
-The schema stores:
-
-- Marketing campaigns.
-- Stable central content identities.
-- Supported social platforms.
-- Social accounts.
-- Platform post URLs and external IDs.
-- Current post metrics.
-- Current account metrics.
-
-The seed script is repeatable and uses upserts so the same demonstration records
-can be refreshed without creating duplicate platform, content, account, post,
-or metrics records.
-
-Credentials and connection strings must be supplied through ignored environment
-files and must not be committed to GitHub.
-
-## Next phase
-
-Phase 4 will replace the simulated YouTube metric refresh path with server-side
-YouTube Data API requests while retaining SQL Server as the normalized storage
-and dashboard source.
+Owner-only analytics such as watch time, audience retention, impressions,
+traffic sources, demographics, and detailed sharing reports require Google OAuth
+and permission from the channel owner. That work is deferred to a later phase.

@@ -74,6 +74,7 @@ export async function getDashboardData(
       return [
         {
           ...platformPresentation,
+          platformTitle: post.PlatformTitle,
           postUrl: post.PostUrl,
           externalPostId:
             post.ExternalPostId ?? `platform-post-${post.PlatformPostId}`,
@@ -147,6 +148,8 @@ function getAnalyticsSource(
   metricsSource: string | null | undefined,
 ): AnalyticsSource {
   switch (metricsSource?.toUpperCase()) {
+    case "YOUTUBE_API":
+      return "youtube-api";
     case "SIMULATED":
       return "simulated";
     case "MANUAL":
@@ -158,14 +161,13 @@ function getAnalyticsSource(
 
 function getUpdatedLabel(
   source: AnalyticsSource,
-  updatedAt: Date | undefined,
+  updatedAt: Date | null | undefined,
 ): string {
   if (!updatedAt || source === "unavailable") {
     return "Metrics unavailable";
   }
 
-  const sourceLabel =
-    source === "simulated" ? "Simulated metrics" : "Manual metrics";
+  const sourceLabel = getSourceLabel(source);
   const dateLabel = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -174,6 +176,19 @@ function getUpdatedLabel(
   }).format(updatedAt);
 
   return `${sourceLabel} updated ${dateLabel}`;
+}
+
+function getSourceLabel(source: AnalyticsSource): string {
+  switch (source) {
+    case "youtube-api":
+      return "YouTube API";
+    case "simulated":
+      return "Simulated metrics";
+    case "manual":
+      return "Manual metrics";
+    default:
+      return "Metrics";
+  }
 }
 
 function formatContentType(contentType: string): string {

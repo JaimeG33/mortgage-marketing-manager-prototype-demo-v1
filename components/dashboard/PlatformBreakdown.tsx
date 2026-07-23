@@ -28,6 +28,7 @@ export function PlatformBreakdown({
           </span>
           <div className="platform-name">
             <strong>{row.platform}</strong>
+            {row.platformTitle ? <small>{row.platformTitle}</small> : null}
             <small>{row.updatedLabel}</small>
           </div>
           <span>{formatCompactNumber(row.reach)} reach</span>

@@ -11,7 +11,9 @@
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
     "db:test": "tsx scripts/testDatabaseConnection.ts",
-    "db:test-dashboard": "tsx scripts/testDashboardData.ts"
+    "db:test-dashboard": "tsx scripts/testDashboardData.ts",
+    "youtube:test": "tsx scripts/testYouTubeDataApi.ts",
+    "youtube:refresh": "tsx scripts/refreshYouTubeMetrics.ts"
   },
   "dependencies": {
     "@prisma/adapter-mssql": "^7.9.0",

@@ -1,5 +1,14 @@
 import { prisma } from "../services/database/prismaClient";
 
+const RAMSEY_PROFILE_URL = "https://www.youtube.com/@TheRamseyShow";
+const LEGACY_YOUTUBE_PROFILE_URL = "https://www.youtube.com/@demo-mortgage";
+const LEGACY_YOUTUBE_POST_URL =
+  "https://www.youtube.com/watch?v=demo-first-time-buyer";
+const PRIMARY_CONTENT_KEY = "first-time-buyer-five-things";
+const SECONDARY_CONTENT_KEY = "ramsey-show-highlights-p-dcmr6e73u";
+const PRIMARY_VIDEO_ID = "HLEEwG3dNcg";
+const SECONDARY_VIDEO_ID = "P_DcMR6e73U";
+
 async function main(): Promise<void> {
   const now = new Date();
 
@@ -37,7 +46,8 @@ async function main(): Promise<void> {
     campaign = await prisma.campaign.update({
       where: { CampaignId: campaign.CampaignId },
       data: {
-        Description: "Demonstration campaign for first-time homebuyer content.",
+        Description:
+          "Demonstration campaign containing public mortgage and personal-finance video analytics.",
         Status: "ACTIVE",
         UpdatedAt: now,
       },
@@ -46,55 +56,36 @@ async function main(): Promise<void> {
     campaign = await prisma.campaign.create({
       data: {
         Name: "First-Time Buyer Series",
-        Description: "Demonstration campaign for first-time homebuyer content.",
+        Description:
+          "Demonstration campaign containing public mortgage and personal-finance video analytics.",
         Status: "ACTIVE",
       },
     });
   }
 
-  const contentItem = await prisma.contentItem.upsert({
-    where: {
-      ContentKey: "first-time-buyer-five-things",
-    },
-    update: {
-      CampaignId: campaign.CampaignId,
-      Title: "5 Things Every First-Time Buyer Should Know",
-      Description:
-        "One central content item represented by matching YouTube and Instagram posts.",
-      ContentType: "SHORT_VIDEO",
-      IsActive: true,
-      UpdatedAt: now,
-    },
-    create: {
-      CampaignId: campaign.CampaignId,
-      ContentKey: "first-time-buyer-five-things",
-      Title: "5 Things Every First-Time Buyer Should Know",
-      Description:
-        "One central content item represented by matching YouTube and Instagram posts.",
-      ContentType: "SHORT_VIDEO",
-      IsActive: true,
-    },
+  const primaryContent = await upsertContentItem({
+    campaignId: campaign.CampaignId,
+    contentKey: PRIMARY_CONTENT_KEY,
+    placeholderTitle: `Ramsey Show Highlights — Video ${PRIMARY_VIDEO_ID}`,
+    description:
+      "Central content item linked to a real Ramsey Show Highlights YouTube post and the existing manual Instagram demonstration post. The YouTube refresh replaces this placeholder title with the public API title.",
+    legacyTitle: "5 Things Every First-Time Buyer Should Know",
+    now,
   });
 
-  const youtubeAccount = await prisma.socialAccount.upsert({
-    where: {
-      ProfileUrl: "https://www.youtube.com/@demo-mortgage",
-    },
-    update: {
-      PlatformId: youtubePlatform.PlatformId,
-      DisplayName: "Demo Mortgage YouTube",
-      ExternalAccountId: "demo-youtube-channel",
-      IsActive: true,
-      UpdatedAt: now,
-    },
-    create: {
-      PlatformId: youtubePlatform.PlatformId,
-      DisplayName: "Demo Mortgage YouTube",
-      ProfileUrl: "https://www.youtube.com/@demo-mortgage",
-      ExternalAccountId: "demo-youtube-channel",
-      IsActive: true,
-    },
+  const secondaryContent = await upsertContentItem({
+    campaignId: campaign.CampaignId,
+    contentKey: SECONDARY_CONTENT_KEY,
+    placeholderTitle: `Ramsey Show Highlights — Video ${SECONDARY_VIDEO_ID}`,
+    description:
+      "Secondary content item used to verify that YouTube metrics are matched to the correct external video ID.",
+    now,
   });
+
+  const youtubeAccount = await getOrMigrateRamseyAccount(
+    youtubePlatform.PlatformId,
+    now,
+  );
 
   const instagramAccount = await prisma.socialAccount.upsert({
     where: {
@@ -116,82 +107,76 @@ async function main(): Promise<void> {
     },
   });
 
-  const youtubePost = await prisma.platformPost.upsert({
+  const primaryYouTubePost = await getOrMigrateYouTubePost({
+    contentItemId: primaryContent.ContentItemId,
+    socialAccountId: youtubeAccount.SocialAccountId,
+    videoId: PRIMARY_VIDEO_ID,
+    placeholderTitle: primaryContent.Title,
+    legacyPostUrl: LEGACY_YOUTUBE_POST_URL,
+    now,
+  });
+
+  const secondaryYouTubePost = await getOrMigrateYouTubePost({
+    contentItemId: secondaryContent.ContentItemId,
+    socialAccountId: youtubeAccount.SocialAccountId,
+    videoId: SECONDARY_VIDEO_ID,
+    placeholderTitle: secondaryContent.Title,
+    now,
+  });
+
+  await prisma.platformPost.updateMany({
     where: {
-      PostUrl:
-        "https://www.youtube.com/watch?v=demo-first-time-buyer",
+      PostUrl: LEGACY_YOUTUBE_POST_URL,
+      PlatformPostId: {
+        not: primaryYouTubePost.PlatformPostId,
+      },
     },
-    update: {
-      ContentItemId: contentItem.ContentItemId,
-      SocialAccountId: youtubeAccount.SocialAccountId,
-      ExternalPostId: "demo-youtube-post-001",
-      PlatformTitle: contentItem.Title,
-      PostFormat: "SHORT",
-      IsActive: true,
+    data: {
+      IsActive: false,
       UpdatedAt: now,
-    },
-    create: {
-      ContentItemId: contentItem.ContentItemId,
-      SocialAccountId: youtubeAccount.SocialAccountId,
-      ExternalPostId: "demo-youtube-post-001",
-      PostUrl:
-        "https://www.youtube.com/watch?v=demo-first-time-buyer",
-      PlatformTitle: contentItem.Title,
-      PostFormat: "SHORT",
-      IsActive: true,
     },
   });
 
   const instagramPost = await prisma.platformPost.upsert({
     where: {
-      PostUrl:
-        "https://www.instagram.com/reel/demo-first-time-buyer/",
+      PostUrl: "https://www.instagram.com/reel/demo-first-time-buyer/",
     },
     update: {
-      ContentItemId: contentItem.ContentItemId,
+      ContentItemId: primaryContent.ContentItemId,
       SocialAccountId: instagramAccount.SocialAccountId,
       ExternalPostId: "demo-instagram-post-001",
-      PlatformTitle: contentItem.Title,
+      PlatformTitle: primaryContent.Title,
       PostFormat: "REEL",
       IsActive: true,
       UpdatedAt: now,
     },
     create: {
-      ContentItemId: contentItem.ContentItemId,
+      ContentItemId: primaryContent.ContentItemId,
       SocialAccountId: instagramAccount.SocialAccountId,
       ExternalPostId: "demo-instagram-post-001",
-      PostUrl:
-        "https://www.instagram.com/reel/demo-first-time-buyer/",
-      PlatformTitle: contentItem.Title,
+      PostUrl: "https://www.instagram.com/reel/demo-first-time-buyer/",
+      PlatformTitle: primaryContent.Title,
       PostFormat: "REEL",
       IsActive: true,
     },
   });
 
-  await prisma.currentPostMetrics.upsert({
-    where: { PlatformPostId: youtubePost.PlatformPostId },
-    update: {
-      ReachCount: 11800n,
-      ReachMetricType: "VIEWS",
-      LikeCount: 520n,
-      CommentCount: 74n,
-      ShareCount: 30n,
-      SaveCount: null,
-      ReactionCount: null,
-      LeadClickCount: 18,
-      MetricsSource: "SIMULATED",
-      UpdatedAt: now,
-    },
-    create: {
-      PlatformPostId: youtubePost.PlatformPostId,
-      ReachCount: 11800n,
-      ReachMetricType: "VIEWS",
-      LikeCount: 520n,
-      CommentCount: 74n,
-      ShareCount: 30n,
-      LeadClickCount: 18,
-      MetricsSource: "SIMULATED",
-    },
+  await seedYouTubeMetricsIfNotLive({
+    platformPostId: primaryYouTubePost.PlatformPostId,
+    reach: 11_800n,
+    likes: 520n,
+    comments: 74n,
+    leadClicks: 18,
+    now,
+  });
+
+  await seedYouTubeMetricsIfNotLive({
+    platformPostId: secondaryYouTubePost.PlatformPostId,
+    reach: 0n,
+    likes: 0n,
+    comments: 0n,
+    leadClicks: 0,
+    now,
   });
 
   await prisma.currentPostMetrics.upsert({
@@ -222,6 +207,294 @@ async function main(): Promise<void> {
   });
 
   console.log("Demo database seed completed successfully.");
+  console.log(`Primary YouTube video: ${PRIMARY_VIDEO_ID}`);
+  console.log(`Secondary YouTube video: ${SECONDARY_VIDEO_ID}`);
+}
+
+interface ContentItemSeedInput {
+  campaignId: number;
+  contentKey: string;
+  placeholderTitle: string;
+  description: string;
+  legacyTitle?: string;
+  now: Date;
+}
+
+async function upsertContentItem(input: ContentItemSeedInput) {
+  const existingContent = await prisma.contentItem.findUnique({
+    where: {
+      ContentKey: input.contentKey,
+    },
+  });
+
+  if (!existingContent) {
+    return prisma.contentItem.create({
+      data: {
+        CampaignId: input.campaignId,
+        ContentKey: input.contentKey,
+        Title: input.placeholderTitle,
+        Description: input.description,
+        ContentType: "VIDEO",
+        IsActive: true,
+      },
+    });
+  }
+
+  const existingPosts = await prisma.platformPost.findMany({
+    where: {
+      ContentItemId: existingContent.ContentItemId,
+    },
+    include: {
+      CurrentPostMetrics: true,
+    },
+  });
+  const hasLiveYouTubeTitle = existingPosts.some(
+    (post) =>
+      post.CurrentPostMetrics?.MetricsSource.toUpperCase() === "YOUTUBE_API",
+  );
+  const shouldReplaceLegacyTitle =
+    input.legacyTitle !== undefined &&
+    existingContent.Title === input.legacyTitle;
+  const title =
+    hasLiveYouTubeTitle && !shouldReplaceLegacyTitle
+      ? existingContent.Title
+      : input.placeholderTitle;
+
+  return prisma.contentItem.update({
+    where: {
+      ContentItemId: existingContent.ContentItemId,
+    },
+    data: {
+      CampaignId: input.campaignId,
+      Title: title,
+      Description: input.description,
+      ContentType: "VIDEO",
+      IsActive: true,
+      UpdatedAt: input.now,
+    },
+  });
+}
+
+async function getOrMigrateRamseyAccount(
+  youtubePlatformId: number,
+  now: Date,
+) {
+  const existingRamseyAccount = await prisma.socialAccount.findUnique({
+    where: {
+      ProfileUrl: RAMSEY_PROFILE_URL,
+    },
+  });
+
+  if (existingRamseyAccount) {
+    const updatedAccount = await prisma.socialAccount.update({
+      where: {
+        SocialAccountId: existingRamseyAccount.SocialAccountId,
+      },
+      data: {
+        PlatformId: youtubePlatformId,
+        DisplayName: "The Ramsey Show Highlights",
+        IsActive: true,
+        UpdatedAt: now,
+      },
+    });
+
+    await deactivateSeparateLegacyAccount(updatedAccount.SocialAccountId, now);
+    return updatedAccount;
+  }
+
+  const legacyAccount = await prisma.socialAccount.findUnique({
+    where: {
+      ProfileUrl: LEGACY_YOUTUBE_PROFILE_URL,
+    },
+  });
+
+  if (legacyAccount) {
+    return prisma.socialAccount.update({
+      where: {
+        SocialAccountId: legacyAccount.SocialAccountId,
+      },
+      data: {
+        PlatformId: youtubePlatformId,
+        DisplayName: "The Ramsey Show Highlights",
+        ProfileUrl: RAMSEY_PROFILE_URL,
+        ExternalAccountId: null,
+        IsActive: true,
+        UpdatedAt: now,
+      },
+    });
+  }
+
+  return prisma.socialAccount.create({
+    data: {
+      PlatformId: youtubePlatformId,
+      DisplayName: "The Ramsey Show Highlights",
+      ProfileUrl: RAMSEY_PROFILE_URL,
+      ExternalAccountId: null,
+      IsActive: true,
+    },
+  });
+}
+
+async function deactivateSeparateLegacyAccount(
+  activeAccountId: number,
+  now: Date,
+): Promise<void> {
+  const legacyAccount = await prisma.socialAccount.findUnique({
+    where: {
+      ProfileUrl: LEGACY_YOUTUBE_PROFILE_URL,
+    },
+  });
+
+  if (!legacyAccount || legacyAccount.SocialAccountId === activeAccountId) {
+    return;
+  }
+
+  await prisma.platformPost.updateMany({
+    where: {
+      SocialAccountId: legacyAccount.SocialAccountId,
+    },
+    data: {
+      IsActive: false,
+      UpdatedAt: now,
+    },
+  });
+
+  await prisma.socialAccount.update({
+    where: {
+      SocialAccountId: legacyAccount.SocialAccountId,
+    },
+    data: {
+      IsActive: false,
+      UpdatedAt: now,
+    },
+  });
+}
+
+interface YouTubePostSeedInput {
+  contentItemId: number;
+  socialAccountId: number;
+  videoId: string;
+  placeholderTitle: string;
+  legacyPostUrl?: string;
+  now: Date;
+}
+
+async function getOrMigrateYouTubePost(input: YouTubePostSeedInput) {
+  const postUrl = `https://www.youtube.com/watch?v=${input.videoId}`;
+  const existingPost = await prisma.platformPost.findUnique({
+    where: {
+      PostUrl: postUrl,
+    },
+  });
+
+  if (existingPost) {
+    return prisma.platformPost.update({
+      where: {
+        PlatformPostId: existingPost.PlatformPostId,
+      },
+      data: {
+        ContentItemId: input.contentItemId,
+        SocialAccountId: input.socialAccountId,
+        ExternalPostId: input.videoId,
+        PlatformTitle: existingPost.PlatformTitle ?? input.placeholderTitle,
+        PostFormat: "VIDEO",
+        IsActive: true,
+        UpdatedAt: input.now,
+      },
+    });
+  }
+
+  if (input.legacyPostUrl) {
+    const legacyPost = await prisma.platformPost.findUnique({
+      where: {
+        PostUrl: input.legacyPostUrl,
+      },
+    });
+
+    if (legacyPost) {
+      return prisma.platformPost.update({
+        where: {
+          PlatformPostId: legacyPost.PlatformPostId,
+        },
+        data: {
+          ContentItemId: input.contentItemId,
+          SocialAccountId: input.socialAccountId,
+          ExternalPostId: input.videoId,
+          PostUrl: postUrl,
+          PlatformTitle: input.placeholderTitle,
+          PostFormat: "VIDEO",
+          IsActive: true,
+          UpdatedAt: input.now,
+        },
+      });
+    }
+  }
+
+  return prisma.platformPost.create({
+    data: {
+      ContentItemId: input.contentItemId,
+      SocialAccountId: input.socialAccountId,
+      ExternalPostId: input.videoId,
+      PostUrl: postUrl,
+      PlatformTitle: input.placeholderTitle,
+      PostFormat: "VIDEO",
+      IsActive: true,
+    },
+  });
+}
+
+interface YouTubeMetricSeedInput {
+  platformPostId: number;
+  reach: bigint;
+  likes: bigint;
+  comments: bigint;
+  leadClicks: number;
+  now: Date;
+}
+
+async function seedYouTubeMetricsIfNotLive(
+  input: YouTubeMetricSeedInput,
+): Promise<void> {
+  const existingMetrics = await prisma.currentPostMetrics.findUnique({
+    where: {
+      PlatformPostId: input.platformPostId,
+    },
+  });
+
+  if (existingMetrics?.MetricsSource.toUpperCase() === "YOUTUBE_API") {
+    return;
+  }
+
+  await prisma.currentPostMetrics.upsert({
+    where: {
+      PlatformPostId: input.platformPostId,
+    },
+    update: {
+      ReachCount: input.reach,
+      ReachMetricType: "VIEWS",
+      LikeCount: input.likes,
+      CommentCount: input.comments,
+      ShareCount: null,
+      SaveCount: null,
+      ReactionCount: null,
+      LeadClickCount: input.leadClicks,
+      MetricsSource: "SIMULATED",
+      UpdatedAt: input.now,
+    },
+    create: {
+      PlatformPostId: input.platformPostId,
+      ReachCount: input.reach,
+      ReachMetricType: "VIEWS",
+      LikeCount: input.likes,
+      CommentCount: input.comments,
+      ShareCount: null,
+      SaveCount: null,
+      ReactionCount: null,
+      LeadClickCount: input.leadClicks,
+      MetricsSource: "SIMULATED",
+      UpdatedAt: input.now,
+    },
+  });
 }
 
 main()
