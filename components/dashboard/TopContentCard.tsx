@@ -7,6 +7,8 @@ import { PlatformBreakdown } from "./PlatformBreakdown";
 interface TopContentCardProps {
   title: string;
   description: string;
+  campaignName: string | null;
+  contentTypeLabel: string;
   combinedMetrics: CombinedMetrics;
   platformMetrics: PlatformPostMetrics[];
 }
@@ -14,6 +16,8 @@ interface TopContentCardProps {
 export function TopContentCard({
   title,
   description,
+  campaignName,
+  contentTypeLabel,
   combinedMetrics,
   platformMetrics,
 }: TopContentCardProps) {
@@ -31,7 +35,7 @@ export function TopContentCard({
 
       <article className="content-card">
         <div className="video-preview">
-          <span>SHORT VIDEO</span>
+          <span>{contentTypeLabel}</span>
           <div className="play" aria-hidden="true">
             ▶
           </div>
@@ -39,7 +43,9 @@ export function TopContentCard({
         </div>
 
         <div className="content-info">
-          <p className="eyebrow">First-time buyer series</p>
+          <p className="eyebrow">
+            {campaignName ?? "Unassigned campaign"}
+          </p>
           <h2>{title}</h2>
           <p className="description">{description}</p>
 

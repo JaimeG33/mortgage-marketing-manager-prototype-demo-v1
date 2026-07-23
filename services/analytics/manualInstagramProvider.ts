@@ -1,9 +1,8 @@
 import type { PlatformPostMetrics } from "./types";
 
 /**
- * Represents the manual analytics provider planned for the first database
- * iteration. The values are simulated during Phase 1 and will later come from
- * a manually maintained SQL Server record.
+ * Legacy deterministic provider retained as the future manual-entry boundary.
+ * Phase 3 reads the dashboard from SQL Server instead of calling this function.
  */
 export function getManualInstagramMetrics(): PlatformPostMetrics {
   return {
@@ -15,6 +14,8 @@ export function getManualInstagramMetrics(): PlatformPostMetrics {
     likes: 340,
     comments: 48,
     shares: 24,
+    saves: 0,
+    reactions: 0,
     leads: 9,
     source: "manual",
     updatedLabel: "Manually entered demo data",

@@ -1,11 +1,8 @@
 import type { PlatformPostMetrics } from "./types";
 
 /**
- * Phase 1 uses deterministic demo values so the dashboard can demonstrate
- * the provider boundary without requiring a YouTube API key yet.
- *
- * In Phase 2, this function can be replaced with a server-side request to the
- * YouTube Data API while keeping the same PlatformPostMetrics return shape.
+ * Legacy deterministic provider retained as the future YouTube API boundary.
+ * Phase 3 reads the dashboard from SQL Server instead of calling this function.
  */
 export function getYouTubeMetrics(): PlatformPostMetrics {
   return {
@@ -17,6 +14,8 @@ export function getYouTubeMetrics(): PlatformPostMetrics {
     likes: 520,
     comments: 72,
     shares: 32,
+    saves: 0,
+    reactions: 0,
     leads: 18,
     source: "simulated",
     updatedLabel: "YouTube demo provider",
