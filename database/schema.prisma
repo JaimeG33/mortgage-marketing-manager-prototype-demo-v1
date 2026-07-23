@@ -1,6 +1,109 @@
-// Phase 2 database placeholder.
-//
-// The SQL Server datasource, Prisma generator, and data models will be added
-// together after the team selects the Prisma version and cloud-hosting setup.
-// Keeping this file in Phase 1 reserves the intended database location without
-// locking the prototype to a premature configuration.
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["partialIndexes"]
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+model Campaign {
+  CampaignId  Int           @id(map: "PK_Campaign") @default(autoincrement())
+  Name        String        @db.NVarChar(150)
+  Description String?
+  StartDate   DateTime?     @db.Date
+  EndDate     DateTime?     @db.Date
+  Status      String        @default("PLANNED", map: "DF_Campaign_Status") @db.VarChar(30)
+  CreatedAt   DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_Campaign_CreatedAt")
+  UpdatedAt   DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_Campaign_UpdatedAt")
+  ContentItem ContentItem[]
+}
+
+model ContentItem {
+  ContentItemId Int            @id(map: "PK_ContentItem") @default(autoincrement())
+  CampaignId    Int?
+  ContentKey    String         @unique(map: "UQ_ContentItem_ContentKey") @db.VarChar(100)
+  Title         String         @db.NVarChar(200)
+  Description   String?
+  ContentType   String         @db.VarChar(50)
+  IsActive      Boolean        @default(true, map: "DF_ContentItem_IsActive")
+  CreatedAt     DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_ContentItem_CreatedAt")
+  UpdatedAt     DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_ContentItem_UpdatedAt")
+  Campaign      Campaign?      @relation(fields: [CampaignId], references: [CampaignId], onUpdate: NoAction, map: "FK_ContentItem_Campaign")
+  PlatformPost  PlatformPost[]
+}
+
+model CurrentAccountMetrics {
+  SocialAccountId    Int           @id(map: "PK_CurrentAccountMetrics")
+  AudienceCount      BigInt?
+  AudienceMetricType String?       @db.VarChar(30)
+  TotalViewCount     BigInt?
+  ContentCount       Int?
+  MetricsSource      String        @default("MANUAL", map: "DF_CurrentAccountMetrics_MetricsSource") @db.VarChar(30)
+  UpdatedAt          DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_CurrentAccountMetrics_UpdatedAt")
+  SocialAccount      SocialAccount @relation(fields: [SocialAccountId], references: [SocialAccountId], onDelete: Cascade, onUpdate: NoAction, map: "FK_CurrentAccountMetrics_SocialAccount")
+}
+
+model CurrentPostMetrics {
+  PlatformPostId  Int          @id(map: "PK_CurrentPostMetrics")
+  ReachCount      BigInt?
+  ReachMetricType String?      @db.VarChar(30)
+  LikeCount       BigInt?
+  CommentCount    BigInt?
+  ShareCount      BigInt?
+  SaveCount       BigInt?
+  ReactionCount   BigInt?
+  LeadClickCount  Int          @default(0, map: "DF_CurrentPostMetrics_LeadClickCount")
+  MetricsSource   String       @default("MANUAL", map: "DF_CurrentPostMetrics_MetricsSource") @db.VarChar(30)
+  UpdatedAt       DateTime     @default(dbgenerated("sysutcdatetime()"), map: "DF_CurrentPostMetrics_UpdatedAt")
+  PlatformPost    PlatformPost @relation(fields: [PlatformPostId], references: [PlatformPostId], onDelete: Cascade, onUpdate: NoAction, map: "FK_CurrentPostMetrics_PlatformPost")
+}
+
+model PlatformPost {
+  PlatformPostId     Int                 @id(map: "PK_PlatformPost") @default(autoincrement())
+  ContentItemId      Int
+  SocialAccountId    Int
+  ExternalPostId     String?             @db.NVarChar(255)
+  PostUrl            String              @unique(map: "UQ_PlatformPost_PostUrl") @db.NVarChar(450)
+  PlatformTitle      String?             @db.NVarChar(300)
+  Caption            String?             @db.NVarChar(Max)
+  PostFormat         String?             @db.VarChar(50)
+  PublishedAt        DateTime?
+  IsActive           Boolean             @default(true, map: "DF_PlatformPost_IsActive")
+  CreatedAt          DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_PlatformPost_CreatedAt")
+  UpdatedAt          DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_PlatformPost_UpdatedAt")
+  CurrentPostMetrics CurrentPostMetrics?
+  ContentItem        ContentItem         @relation(fields: [ContentItemId], references: [ContentItemId], onDelete: Cascade, onUpdate: NoAction, map: "FK_PlatformPost_ContentItem")
+  SocialAccount      SocialAccount       @relation(fields: [SocialAccountId], references: [SocialAccountId], onUpdate: NoAction, map: "FK_PlatformPost_SocialAccount")
+
+  @@unique([SocialAccountId, ExternalPostId], map: "UX_PlatformPost_Account_ExternalPostId", where: raw("([ExternalPostId] IS NOT NULL)"))
+  @@index([ContentItemId], map: "IX_PlatformPost_ContentItemId")
+  @@index([SocialAccountId], map: "IX_PlatformPost_SocialAccountId")
+}
+
+model SocialAccount {
+  SocialAccountId       Int                    @id(map: "PK_SocialAccount") @default(autoincrement())
+  PlatformId            Int
+  DisplayName           String                 @db.NVarChar(150)
+  ProfileUrl            String                 @unique(map: "UQ_SocialAccount_ProfileUrl") @db.NVarChar(450)
+  ExternalAccountId     String?                @db.NVarChar(255)
+  IsActive              Boolean                @default(true, map: "DF_SocialAccount_IsActive")
+  CreatedAt             DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_SocialAccount_CreatedAt")
+  UpdatedAt             DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_SocialAccount_UpdatedAt")
+  CurrentAccountMetrics CurrentAccountMetrics?
+  PlatformPost          PlatformPost[]
+  SocialPlatform        SocialPlatform         @relation(fields: [PlatformId], references: [PlatformId], onUpdate: NoAction, map: "FK_SocialAccount_SocialPlatform")
+
+  @@unique([PlatformId, ExternalAccountId], map: "UX_SocialAccount_Platform_ExternalAccountId", where: raw("([ExternalAccountId] IS NOT NULL)"))
+}
+
+model SocialPlatform {
+  PlatformId    Int             @id(map: "PK_SocialPlatform") @default(autoincrement())
+  PlatformCode  String          @unique(map: "UQ_SocialPlatform_PlatformCode") @db.VarChar(30)
+  DisplayName   String          @db.NVarChar(100)
+  IsActive      Boolean         @default(true, map: "DF_SocialPlatform_IsActive")
+  CreatedAt     DateTime        @default(dbgenerated("sysutcdatetime()"), map: "DF_SocialPlatform_CreatedAt")
+  SocialAccount SocialAccount[]
+}
