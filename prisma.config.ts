@@ -6,6 +6,7 @@ export default defineConfig({
 
   migrations: {
     path: "database/migrations",
+    seed: "tsx database/seedDemoData.ts",
   },
 
   datasource: {
